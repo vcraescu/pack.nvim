@@ -6,6 +6,10 @@ local M = {
   _after = nil,
 }
 
+function M._notify(msg, hl)
+  vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, false, {})
+end
+
 function M._load_plugins()
   local GITHUB_PREFIX = "https://github.com/"
   local pack_plugins = {}
@@ -42,6 +46,8 @@ function M._create_pack_reload_command()
     M._load_plugins()
     M._setup_commands()
     M._after()
+
+    M._notify("Plugins reloaded", "OkMsg")
   end, { force = true })
 end
 
