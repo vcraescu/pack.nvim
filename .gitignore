@@ -1,0 +1,13 @@
+# Neovim / Vim artifacts
+doc/tags
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

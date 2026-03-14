@@ -1,0 +1,122 @@
+*pack.txt*  A thin wrapper around Neovim's built-in vim.pack
+
+Author:   vcraescu
+License:  MIT
+Homepage: https://github.com/vcraescu/pack.nvim
+
+==============================================================================
+CONTENTS                                                          *pack-contents*
+
+  1. Introduction ....................................... |pack-introduction|
+  2. Requirements ....................................... |pack-requirements|
+  3. Installation ....................................... |pack-installation|
+  4. Setup .............................................. |pack-setup|
+  5. Configuration ...................................... |pack-configuration|
+  6. Commands ........................................... |pack-commands|
+  7. Types .............................................. |pack-types|
+
+==============================================================================
+1. INTRODUCTION                                               *pack-introduction*
+
+pack.nvim is a thin wrapper around Neovim's built-in `vim.pack` API
+(available since Neovim 0.11). It provides a simple, declarative interface
+for managing plugins without requiring an external plugin manager.
+
+==============================================================================
+2. REQUIREMENTS                                               *pack-requirements*
+
+- Neovim >= 0.11
+
+==============================================================================
+3. INSTALLATION                                               *pack-installation*
+
+Bootstrap by cloning the repository into your Neovim data directory: >sh
+
+  git clone https://github.com/vcraescu/pack.nvim \
+    "${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/pack/pack/start/pack.nvim"
+<
+
+==============================================================================
+4. SETUP                                                             *pack-setup*
+
+Call `require("pack").setup()` in your `init.lua`: >lua
+
+  require("pack").setup({
+    plugins = {
+      { src = "nvim-lua/plenary.nvim" },
+      {
+        src = "nvim-telescope/telescope.nvim",
+        setup = function()
+          require("telescope").setup({})
+        end,
+      },
+      { dir = "~/projects/my-plugin" },
+    },
+    after = function()
+      vim.keymap.set("n", "<leader>ff", "<cmd>Telescope find_files<cr>")
+    end,
+  })
+<
+
+==============================================================================
+5. CONFIGURATION                                             *pack-configuration*
+
+                                                                  *pack.Config*
+`pack.Config` is a table with the following fields:
+
+  `plugins`   `pack.Plugin[]`    Required. List of plugin specifications.
+
+  `after`     `fun()` (optional) Called after all plugins have been loaded
+                                 and their `setup` callbacks invoked.
+
+                                                                  *pack.Plugin*
+`pack.Plugin` is a table with the following fields:
+
+  `src`    `string` (optional)   GitHub shorthand (`user/repo`) or a full
+                                 HTTPS URL pointing to the plugin repository.
+                                 If no URL scheme is present, the GitHub
+                                 prefix is added automatically.
+
+  `dir`    `string` (optional)   Path to a local plugin directory. Supports
+                                 `~` expansion via |vim.fs.normalize()|.
+
+  `setup`  `fun()` (optional)    Callback invoked after the plugin has been
+                                 added to the runtime path.
+
+Either `src` or `dir` must be provided for each plugin entry.
+
+==============================================================================
+6. COMMANDS                                                       *pack-commands*
+
+                                                                  *:PackReload*
+:PackReload
+    Unloads all Lua modules (except built-ins), reloads all plugins, re-runs
+    every `setup` callback, recreates commands, and invokes the `after` hook.
+    Useful during plugin development or after editing your configuration.
+
+                                                                  *:PackUpdate*
+:PackUpdate
+    Calls `vim.pack.update()` to update all installed plugins.
+
+                                                              *:PackDel* *PackDel*
+:PackDel {name} [name ...]
+    Removes one or more installed packages by name. Accepts tab-completion
+    from the list of currently installed packages.
+
+                                                              *:PackGet* *PackGet*
+:PackGet [{name} ...]
+    Prints information about installed packages. When no arguments are given,
+    all packages are listed. Accepts tab-completion from the list of currently
+    installed packages.
+
+==============================================================================
+7. TYPES                                                             *pack-types*
+
+The following type aliases are defined in `lua/pack/types.lua`:
+
+  `pack.Plugin`   { src?: string, dir?: string, setup?: fun() }
+  `pack.Config`   { plugins: pack.Plugin[], after?: fun() }
+  `pack.Hook`     fun()
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
