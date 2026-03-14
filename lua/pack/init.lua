@@ -7,7 +7,9 @@ local M = {
 }
 
 function M._notify(msg, hl)
-  vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, false, {})
+  vim.schedule(function()
+    vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, false, {})
+  end)
 end
 
 function M._load_plugins()
@@ -35,14 +37,37 @@ function M._load_plugins()
   end
 end
 
+function M._plugin_module_name(plugin)
+  local path = plugin.src or plugin.dir or ""
+  local name = path:match("([^/]+)$") or ""
+
+  return (name:gsub("%.nvim$", ""):gsub("%.vim$", ""):gsub("[%-%.]", "_"))
+end
+
+function M._unload_plugins()
+  local stems = {}
+
+  for _, plugin in ipairs(M._plugins) do
+    local mod = M._plugin_module_name(plugin)
+
+    if mod ~= "" then
+      stems[mod] = true
+    end
+  end
+
+  for name, _ in pairs(package.loaded) do
+    local mod_stem = name:match("^([^%.]+)")
+
+    if mod_stem and stems[mod_stem] then
+      print("Unloading " .. name)
+      package.loaded[name] = nil
+    end
+  end
+end
+
 function M._create_pack_reload_command()
   vim.api.nvim_create_user_command("PackReload", function()
-    for name, _ in pairs(package.loaded) do
-      if type(package.loaded[name]) ~= "userdata" and not name:match("^_") then
-        package.loaded[name] = nil
-      end
-    end
-
+    M._unload_plugins()
     M._load_plugins()
     M._setup_commands()
     M._after()
