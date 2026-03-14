@@ -7,9 +7,7 @@ local M = {
 }
 
 function M._notify(msg, hl)
-  vim.schedule(function()
-    vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, false, {})
-  end)
+  vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, true, {})
 end
 
 function M._load_plugins()
@@ -41,7 +39,7 @@ function M._plugin_module_name(plugin)
   local path = plugin.src or plugin.dir or ""
   local name = path:match("([^/]+)$") or ""
 
-  return (name:gsub("%.nvim$", ""):gsub("%.vim$", ""):gsub("[%-%.]", "_"))
+  return name:gsub("%.nvim$", ""):gsub("%.vim$", "")
 end
 
 function M._unload_plugins()
@@ -59,8 +57,8 @@ function M._unload_plugins()
     local mod_stem = name:match("^([^%.]+)")
 
     if mod_stem and stems[mod_stem] then
-      print("Unloading " .. name)
       package.loaded[name] = nil
+      M._notify("Plugin unloaded " .. name, "WarningMsg")
     end
   end
 end
@@ -72,7 +70,9 @@ function M._create_pack_reload_command()
     M._setup_commands()
     M._after()
 
-    M._notify("Plugins reloaded", "OkMsg")
+    vim.schedule(function()
+      M._notify("Plugins reloaded", "OkMsg")
+    end)
   end, { force = true })
 end
 
