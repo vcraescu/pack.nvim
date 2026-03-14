@@ -58,7 +58,6 @@ function M._unload_plugins()
 
     if mod_stem and stems[mod_stem] then
       package.loaded[name] = nil
-      M._notify("Plugin unloaded " .. name, "WarningMsg")
     end
   end
 end
