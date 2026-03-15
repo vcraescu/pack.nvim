@@ -6,6 +6,9 @@ local M = {
   _after = nil,
 }
 
+--- @private
+--- @param msg string
+--- @param hl string
 function M._notify(msg, hl)
   vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, true, {})
 end
@@ -35,6 +38,8 @@ function M._load_plugins()
   end
 end
 
+--- @private
+--- @param plugin pack.Plugin
 function M._plugin_module_name(plugin)
   local path = plugin.src or plugin.dir or ""
   local name = path:match("([^/]+)$") or ""
@@ -42,26 +47,34 @@ function M._plugin_module_name(plugin)
   return name:gsub("%.nvim$", ""):gsub("%.vim$", "")
 end
 
+--- @private
 function M._unload_plugins()
-  local stems = {}
-
   for _, plugin in ipairs(M._plugins) do
     local mod = M._plugin_module_name(plugin)
 
-    if mod ~= "" then
-      stems[mod] = true
-    end
-  end
+    M._try_call_deactivate(plugin)
 
-  for name, _ in pairs(package.loaded) do
-    local mod_stem = name:match("^([^%.]+)")
+    for name, _ in pairs(package.loaded) do
+      if mod == name or vim.startswith(name, mod .. ".") then
+        if mod == name then
+          M._try_call_deactivate(package.loaded[name])
+        end
 
-    if mod_stem and stems[mod_stem] then
-      package.loaded[name] = nil
+        package.loaded[name] = nil
+      end
     end
   end
 end
 
+--- @private
+--- @param mod table
+function M._try_call_deactivate(mod)
+  if type(mod) == "table" and type(mod.deactivate) == "function" then
+    mod.deactivate()
+  end
+end
+
+--- @private
 function M._create_pack_reload_command()
   vim.api.nvim_create_user_command("PackReload", function()
     M._unload_plugins()
@@ -75,12 +88,14 @@ function M._create_pack_reload_command()
   end, { force = true })
 end
 
+--- @private
 function M._create_pack_update_command()
   vim.api.nvim_create_user_command("PackUpdate", function()
     vim.pack.update()
   end, { force = true })
 end
 
+--- @private
 function M._create_pack_del_command()
   vim.api.nvim_create_user_command("PackDel", function(opts)
     vim.pack.del(opts.fargs)
@@ -98,6 +113,7 @@ function M._create_pack_del_command()
   })
 end
 
+--- @private
 function M._create_pack_get_command()
   vim.api.nvim_create_user_command("PackGet", function(opts)
     if #opts.fargs > 0 then
@@ -119,6 +135,7 @@ function M._create_pack_get_command()
   })
 end
 
+--- @private
 function M._setup_commands()
   M._create_pack_reload_command()
   M._create_pack_update_command()
