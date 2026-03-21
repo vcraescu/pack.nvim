@@ -1,8 +1,10 @@
+local Plugin = require("pack.plugin")
+
 local M = {
   --- @type pack.Plugin[]
   _plugins = {},
 
-  --- @type pack.Hook fun()
+  --- @type pack.Hook
   _after = nil,
 }
 
@@ -14,17 +16,17 @@ function M._notify(msg, hl)
 end
 
 function M._load_plugins()
-  local pack_plugins = {}
+  local plugins = {}
 
   for _, plugin in ipairs(M._plugins) do
     if plugin:is_local() then
       plugin:load_local()
-    else
-      table.insert(pack_plugins, { src = plugin:src() })
+    elseif plugin:is_remote() then
+      table.insert(plugins, { src = plugin:get_src() })
     end
   end
 
-  vim.pack.add(pack_plugins, { load = true, confirm = false })
+  vim.pack.add(plugins, { load = true, confirm = false })
 
   for _, plugin in ipairs(M._plugins) do
     plugin:setup()
@@ -107,13 +109,13 @@ function M._setup_commands()
   M._create_pack_get_command()
 end
 
---- @param config pack.Config { plugins: pack.Plugin.Config[], after?: fun() }
+--- @param config pack.Config
 function M.setup(config)
   config = config or {}
-  config.plugins = config.plugins or {}
+  local plugins = config.plugins or {}
 
-  for i, plugin in ipairs(M._plugins) do
-    M._plugins[i] = M.new(plugin)
+  for i, plugin in ipairs(plugins) do
+    M._plugins[i] = Plugin.new(plugin)
   end
 
   M._after = config.after or function() end
