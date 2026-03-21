@@ -2,7 +2,7 @@ local M = {
   --- @type pack.Plugin[]
   _plugins = {},
 
-  --- @type pack.Hook
+  --- @type pack.Hook fun()
   _after = nil,
 }
 
@@ -14,63 +14,27 @@ function M._notify(msg, hl)
 end
 
 function M._load_plugins()
-  local GITHUB_PREFIX = "https://github.com/"
   local pack_plugins = {}
 
   for _, plugin in ipairs(M._plugins) do
-    if plugin.dir then
-      vim.opt.runtimepath:append(vim.fs.normalize(plugin.dir))
-    elseif plugin.src then
-      if not plugin.src:match("^%a+://") then
-        plugin.src = GITHUB_PREFIX .. plugin.src
-      end
-
-      table.insert(pack_plugins, plugin)
+    if plugin:is_local() then
+      plugin:load_local()
+    else
+      table.insert(pack_plugins, { src = plugin:src() })
     end
   end
 
   vim.pack.add(pack_plugins, { load = true, confirm = false })
 
   for _, plugin in ipairs(M._plugins) do
-    if plugin.setup ~= nil then
-      plugin.setup()
-    end
+    plugin:setup()
   end
-end
-
---- @private
---- @param plugin pack.Plugin
-function M._plugin_module_name(plugin)
-  local path = plugin.src or plugin.dir or ""
-  local name = path:match("([^/]+)$") or ""
-
-  return name:gsub("%.nvim$", ""):gsub("%.vim$", "")
 end
 
 --- @private
 function M._unload_plugins()
   for _, plugin in ipairs(M._plugins) do
-    local mod = M._plugin_module_name(plugin)
-
-    M._try_call_deactivate(plugin)
-
-    for name, _ in pairs(package.loaded) do
-      if mod == name or vim.startswith(name, mod .. ".") then
-        if mod == name then
-          M._try_call_deactivate(package.loaded[name])
-        end
-
-        package.loaded[name] = nil
-      end
-    end
-  end
-end
-
---- @private
---- @param mod table
-function M._try_call_deactivate(mod)
-  if type(mod) == "table" and type(mod.deactivate) == "function" then
-    mod.deactivate()
+    plugin:unload()
   end
 end
 
@@ -143,9 +107,15 @@ function M._setup_commands()
   M._create_pack_get_command()
 end
 
---- @param config pack.Config
+--- @param config pack.Config { plugins: pack.Plugin.Config[], after?: fun() }
 function M.setup(config)
-  M._plugins = config.plugins or {}
+  config = config or {}
+  config.plugins = config.plugins or {}
+
+  for i, plugin in ipairs(M._plugins) do
+    M._plugins[i] = M.new(plugin)
+  end
+
   M._after = config.after or function() end
 
   M._load_plugins()

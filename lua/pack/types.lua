@@ -1,3 +1,0 @@
---- @alias pack.Plugin { src?: string, dir?: string, setup?: fun(), deactivate?: fun() }
---- @alias pack.Config { plugins: pack.Plugin[], after?: fun() }
---- @alias pack.Hook fun()
