@@ -1,86 +1,72 @@
 local Plugin = require("pack.plugin")
 
-local M = {
-  --- @type pack.Plugin[]
-  _plugins = {},
+local M = {}
 
-  --- @type pack.Hook
-  _after = nil,
-}
-
---- @private
 --- @param msg string
 --- @param hl string
-function M._notify(msg, hl)
+local function notify(msg, hl)
   vim.api.nvim_echo({ { "[Pack] ", "Conceal" }, { msg, hl } }, true, {})
 end
 
-function M._load_plugins()
-  local plugins = {}
+--- @param plugins pack.Plugin[]
+local function load_plugins(plugins)
+  local remote = {}
 
-  for _, plugin in ipairs(M._plugins) do
+  for _, plugin in ipairs(plugins) do
     if plugin:is_local() then
       plugin:load_local()
     elseif plugin:is_remote() then
-      table.insert(plugins, { src = plugin:get_src() })
+      remote[#remote + 1] = { src = plugin:get_src() }
     end
   end
 
-  vim.pack.add(plugins, { load = true, confirm = false })
+  vim.pack.add(remote, { load = true, confirm = false })
 
-  for _, plugin in ipairs(M._plugins) do
+  for _, plugin in ipairs(plugins) do
     plugin:setup()
   end
 end
 
---- @private
-function M._unload_plugins()
-  for _, plugin in ipairs(M._plugins) do
+--- @param plugins pack.Plugin[]
+local function unload_plugins(plugins)
+  for _, plugin in ipairs(plugins) do
     plugin:unload()
   end
 end
 
---- @private
-function M._create_pack_reload_command()
+--- @param plugins pack.Plugin[]
+--- @param after pack.Hook
+local function setup_commands(plugins, after)
   vim.api.nvim_create_user_command("PackReload", function()
-    M._unload_plugins()
-    M._load_plugins()
-    M._setup_commands()
-    M._after()
+    unload_plugins(plugins)
+    load_plugins(plugins)
+    setup_commands(plugins, after)
+    after()
 
     vim.schedule(function()
-      M._notify("Plugins reloaded", "OkMsg")
+      notify("Plugins reloaded", "OkMsg")
     end)
   end, { force = true })
-end
 
---- @private
-function M._create_pack_update_command()
   vim.api.nvim_create_user_command("PackUpdate", function()
     vim.pack.update()
   end, { force = true })
-end
 
---- @private
-function M._create_pack_del_command()
+  local function installed_pkg_names()
+    local names = {}
+    for _, pkg in ipairs(vim.pack.get()) do
+      names[#names + 1] = vim.fn.fnamemodify(pkg.path, ":t")
+    end
+    return names
+  end
+
   vim.api.nvim_create_user_command("PackDel", function(opts)
     vim.pack.del(opts.fargs)
   end, {
     nargs = "+",
-    complete = function()
-      local pkgs = {}
-
-      for _, pkg in ipairs(vim.pack.get()) do
-        table.insert(pkgs, vim.fn.fnamemodify(pkg.path, ":t"))
-      end
-
-      return pkgs
-    end,
+    complete = installed_pkg_names,
   })
-end
 
---- @private
-function M._create_pack_get_command()
   vim.api.nvim_create_user_command("PackGet", function(opts)
     if #opts.fargs > 0 then
       print(vim.inspect(vim.pack.get(opts.fargs)))
@@ -89,40 +75,24 @@ function M._create_pack_get_command()
     end
   end, {
     nargs = "*",
-    complete = function()
-      local pkgs = {}
-
-      for _, pkg in ipairs(vim.pack.get()) do
-        table.insert(pkgs, vim.fn.fnamemodify(pkg.path, ":t"))
-      end
-
-      return pkgs
-    end,
+    complete = installed_pkg_names,
   })
-end
-
---- @private
-function M._setup_commands()
-  M._create_pack_reload_command()
-  M._create_pack_update_command()
-  M._create_pack_del_command()
-  M._create_pack_get_command()
 end
 
 --- @param config pack.Config
 function M.setup(config)
   config = config or {}
-  local plugins = config.plugins or {}
 
-  for i, plugin in ipairs(plugins) do
-    M._plugins[i] = Plugin.new(plugin)
+  local plugins = {}
+  for i, spec in ipairs(config.plugins or {}) do
+    plugins[i] = Plugin.new(spec)
   end
 
-  M._after = config.after or function() end
+  local after = config.after or function() end
 
-  M._load_plugins()
-  M._setup_commands()
-  M._after()
+  load_plugins(plugins)
+  setup_commands(plugins, after)
+  after()
 end
 
 return M

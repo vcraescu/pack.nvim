@@ -1,26 +1,16 @@
 --- @class pack.Config
---- @field plugins pack.Plugin.Config[]
---- @field after? fun()
-
---- @class pack.Plugin
---- @field _config pack.Plugin.Config
---- @field new fun(config: pack.Plugin.Config): pack.Plugin
---- @field get_name fun(): string
---- @field is_local fun(): boolean
---- @field is_remote fun(): boolean
---- @field is_inline fun(): boolean
---- @field get_src fun(): string
---- @field setup fun()
---- @field deactivate fun()
---- @field load_local fun()
---- @field get_submodules fun(): string[]
---- @field get_module fun(): table?
+--- @field plugins? pack.Plugin.Config[]
+--- @field after? pack.Hook
 
 --- @class pack.Plugin.Config
---- @field src? string
---- @field dir? string
---- @field setup? fun()
---- @field deactivate? fun()
---- @field name? string
+--- @field src? string      GitHub shorthand (user/repo) or full URL
+--- @field dir? string      Path to a local plugin directory
+--- @field name? string     Override the derived module name
+--- @field setup? fun()     Called after the plugin is added to the runtimepath
+--- @field deactivate? fun() Called before the plugin is unloaded
+
+--- @class pack.Plugin
+--- @field private _config pack.Plugin.Config
+--- @field new fun(config: pack.Plugin.Config): pack.Plugin
 
 --- @alias pack.Hook fun()
